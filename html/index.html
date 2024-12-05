@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CRUD con Perl y AJAX</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gestión de Empleados</h1>
+    <form id="employeeForm">
+        <input type="hidden" name="id" id="id">
+        <label>Nombre:</label>
+        <input type="text" name="name" id="name" required>
+        <label>Posición:</label>
+        <input type="text" name="position" id="position" required>
+        <label>Salario:</label>
+        <input type="number" name="salary" id="salary" required>
+        <button type="submit">Guardar</button>
+    </form>
+
+    <h2>Lista de Empleados</h2>
+    <table id="employeeTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Posición</th>
+                <th>Salario</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        const apiUrl = '../cgi-bin/api.pl';
+        fetchEmployees();
+        document.getElementById('employeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                fetchEmployees();
+                e.target.reset();
+            } else {
+                alert('Error al guardar el empleado');
+            }
+        });
+        async function fetchEmployees() {
+            const response = await fetch(apiUrl);
+            const employees = await response.json();
+            const tableBody = document.querySelector('#employeeTable tbody');
+            tableBody.innerHTML = '';
+
+            employees.forEach((employee) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.id}</td>
+                    <td>${employee.name}</td>
+                    <td>${employee.position}</td>
+                    <td>${employee.salary}</td>
+                    <td>
+                        <button onclick="editEmployee(${employee.id})">Editar</button>
+                        <button onclick="deleteEmployee(${employee.id})">Eliminar</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        async function editEmployee(id) {
+            const response = await fetch(`${apiUrl}?id=${id}`);
+            const employee = await response.json();
+
+            document.getElementById('id').value = employee.id;
+            document.getElementById('name').value = employee.name;
+            document.getElementById('position').value = employee.position;
+            document.getElementById('salary').value = employee.salary;
+        }
+
+        async function deleteEmployee(id) {
+            const response = await fetch(`${apiUrl}?id=${id}`, { method: 'DELETE' });
+            if (response.ok) fetchEmployees();
+            else alert('Error al eliminar el empleado');
+        }
+    </script>
+</body>
+</html>
