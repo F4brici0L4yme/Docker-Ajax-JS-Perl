@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD with AJAX</title>
+    <title>CRUD Example with AJAX</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-    <h1>CRUD Example with AJAX</h1>
-    <form id="addForm">
+    <h1>CRUD Example with AJAX and jQuery</h1>
+
+    <!-- Formulario para agregar un nuevo registro -->
+    <form id="add-form">
         <input type="hidden" name="action" value="insert">
         <label for="name">Name:</label>
         <input type="text" id="name" name="name" required>
@@ -27,8 +30,11 @@
         <input type="date" id="death" name="death">
         <button type="submit">Add</button>
     </form>
+
     <hr>
-    <table id="petsTable" border="1">
+
+    <!-- Tabla para mostrar registros -->
+    <table border="1" id="pets-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -41,87 +47,94 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Rows will be populated dynamically -->
+            <!-- Los datos se rellenan dinámicamente aquí -->
         </tbody>
     </table>
 
     <script>
-        const CGI_URL = '../cgi-bin/crud.pl';
-
-        // Fetch all pets and display them
+        // Función para cargar registros
         function fetchPets() {
-            $.post(CGI_URL, { action: 'fetch' }, function (response) {
-                if (response.status === 'success') {
-                    const tbody = $('#petsTable tbody');
-                    tbody.empty();
-                    response.data.forEach(pet => {
-                        tbody.append(`
-                            <tr>
-                                <td><input type="text" class="name" value="${pet.name}"></td>
-                                <td><input type="text" class="owner" value="${pet.owner}"></td>
-                                <td><input type="text" class="species" value="${pet.species}"></td>
-                                <td>
-                                    <select class="sex">
-                                        <option value="m" ${pet.sex === 'm' ? 'selected' : ''}>Male</option>
-                                        <option value="f" ${pet.sex === 'f' ? 'selected' : ''}>Female</option>
-                                    </select>
-                                </td>
-                                <td><input type="date" class="birth" value="${pet.birth}"></td>
-                                <td><input type="date" class="death" value="${pet.death || ''}"></td>
-                                <td>
-                                    <button class="update" data-name="${pet.name}">Update</button>
-                                    <button class="delete" data-name="${pet.name}">Delete</button>
-                                </td>
-                            </tr>
-                        `);
-                    });
+            $.ajax({
+                url: '../cgi-bin/crud.pl',
+                type: 'POST',
+                data: { action: 'fetch' },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let rows = '';
+                        response.data.forEach(function(pet) {
+                            rows += `
+                                <tr>
+                                    <td>${pet.name}</td>
+                                    <td>${pet.owner}</td>
+                                    <td>${pet.species}</td>
+                                    <td>${pet.sex}</td>
+                                    <td>${pet.birth}</td>
+                                    <td>${pet.death || ''}</td>
+                                    <td>
+                                        <button class="update-btn" data-name="${pet.name}">Update</button>
+                                        <button class="delete-btn" data-name="${pet.name}">Delete</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#pets-table tbody').html(rows);
+                    }
                 }
-            }, 'json');
+            });
         }
 
-        // Handle form submission for adding a pet
-        $('#addForm').on('submit', function (e) {
+        // Insertar un nuevo registro
+        $('#add-form').on('submit', function(e) {
             e.preventDefault();
-            const formData = $(this).serialize();
-            $.post(CGI_URL, formData, function (response) {
-                if (response.status === 'success') {
-                    fetchPets();
-                    $('#addForm')[0].reset();
-                }
-            }, 'json');
-        });
-
-        // Handle update and delete actions
-        $('#petsTable').on('click', '.update', function () {
-            const row = $(this).closest('tr');
-            const data = {
-                action: 'update',
-                old_name: $(this).data('name'),
-                name: row.find('.name').val(),
-                owner: row.find('.owner').val(),
-                species: row.find('.species').val(),
-                sex: row.find('.sex').val(),
-                birth: row.find('.birth').val(),
-                death: row.find('.death').val()
-            };
-            $.post(CGI_URL, data, function (response) {
-                if (response.status === 'success') {
+            const data = $(this).serialize();
+            $.ajax({
+                url: '../cgi-bin/crud.pl',
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(response) {
+                    alert(response.message);
                     fetchPets();
                 }
-            }, 'json');
+            });
         });
 
-        $('#petsTable').on('click', '.delete', function () {
+        // Eliminar un registro
+        $(document).on('click', '.delete-btn', function() {
             const name = $(this).data('name');
-            $.post(CGI_URL, { action: 'delete', name }, function (response) {
-                if (response.status === 'success') {
+            $.ajax({
+                url: '../cgi-bin/crud.pl',
+                type: 'POST',
+                data: { action: 'delete', name: name },
+                dataType: 'json',
+                success: function(response) {
+                    alert(response.message);
                     fetchPets();
                 }
-            }, 'json');
+            });
         });
 
-        // Initial fetch
-        fetchPets();
+        // Actualizar un registro (ejemplo básico)
+        $(document).on('click', '.update-btn', function() {
+            const name = $(this).data('name');
+            const newName = prompt('Enter new name:', name);
+            if (newName) {
+                $.ajax({
+                    url: '../cgi-bin/crud.pl',
+                    type: 'POST',
+                    data: { action: 'update', old_name: name, name: newName },
+                    dataType: 'json',
+                    success: function(response) {
+                        alert(response.message);
+                        fetchPets();
+                    }
+                });
+            }
+        });
+
+        // Cargar los registros iniciales al cargar la página
+        $(document).ready(fetchPets);
     </script>
 </body>
 </html>
