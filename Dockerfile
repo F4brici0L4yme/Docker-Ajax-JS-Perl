@@ -7,7 +7,6 @@ RUN apt-get update && \
         apache2 \
         perl \
         libcgi-pm-perl \
-        libtext-csv-perl \
         mariadb-server \
         mariadb-client \
         libdbd-mysql-perl \

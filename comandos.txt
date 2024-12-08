@@ -1,7 +1,8 @@
-paso 1: Copiar este comando para crear la imagen.
+1 Crear la imagen:
 
 docker build -t pruebas .
-
-paso 2: copiar este comando para crear el contenerdor.
+ 
+2 Crear el contenedor en base a la imagen
 
 docker run -d --name pruebazzz -p 8089:80 pruebas
+ 
