@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Example with AJAX</title>
+    <title>Menagerie</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="./styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>CRUD Example with AJAX and jQuery</h1>
-
-    <!-- Formulario para agregar un nuevo registro -->
+    <h1>¡Welcome to the menagerie!</h1>
     <form id="add-form">
         <input type="hidden" name="action" value="insert">
         <label for="name">Name:</label>
@@ -32,8 +31,6 @@
     </form>
 
     <hr>
-
-    <!-- Tabla para mostrar registros -->
     <table border="1" id="pets-table">
         <thead>
             <tr>
@@ -47,44 +44,42 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Los datos se rellenan dinámicamente aquí -->
         </tbody>
     </table>
 
     <script>
-        // Función para cargar registros
         function fetchPets() {
             $.ajax({
                 url: '../cgi-bin/crud.pl',
                 type: 'POST',
                 data: { action: 'fetch' },
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.status === 'success') {
                         let rows = '';
-                        response.data.forEach(function(pet) {
+                        response.data.forEach(function (pet) {
                             rows += `
-                                <tr>
-                                    <td>${pet.name}</td>
-                                    <td>${pet.owner}</td>
-                                    <td>${pet.species}</td>
-                                    <td>${pet.sex}</td>
-                                    <td>${pet.birth}</td>
-                                    <td>${pet.death || ''}</td>
+                                <tr data-original='${JSON.stringify(pet)}'>
+                                    <td contenteditable="false">${pet.name}</td>
+                                    <td contenteditable="false">${pet.owner}</td>
+                                    <td contenteditable="false">${pet.species}</td>
+                                    <td contenteditable="false">${pet.sex}</td>
+                                    <td contenteditable="false">${pet.birth}</td>
+                                    <td contenteditable="false">${pet.death || ''}</td>
                                     <td>
-                                        <button class="update-btn" data-name="${pet.name}">Update</button>
-                                        <button class="delete-btn" data-name="${pet.name}">Delete</button>
+                                        <button class="edit-btn"><i class="fas fa-pen"></i></button>
+                                        <button class="save-btn" style="display:none;"><i class="fas fa-save"></i></button>
+                                        <button class="cancel-btn" style="display:none;"><i class="fas fa-times"></i></button>
+                                        <button class="delete-btn"><i class="fas fa-trash"></i></button>
                                     </td>
                                 </tr>
                             `;
                         });
                         $('#pets-table tbody').html(rows);
                     }
-                }
+                },
             });
         }
-
-        // Insertar un nuevo registro
         $('#add-form').on('submit', function(e) {
             e.preventDefault();
             const data = $(this).serialize();
@@ -100,41 +95,78 @@
             });
         });
 
-        // Eliminar un registro
-        $(document).on('click', '.delete-btn', function() {
-            const name = $(this).data('name');
+        $(document).on('click', '.edit-btn', function () {
+            const row = $(this).closest('tr');
+            row.find('td[contenteditable="false"]').attr('contenteditable', 'true').addClass('editable');
+            row.find('.edit-btn').hide();
+            row.find('.save-btn, .cancel-btn').show();
+        });
+
+        $(document).on('click', '.save-btn', function () {
+            const row = $(this).closest('tr');
+            const originalData = JSON.parse(row.attr('data-original'));
+        
+            const updatedPet = {
+                old_name: originalData.name,
+                name: row.find('td:eq(0)').text().trim(),
+                owner: row.find('td:eq(1)').text().trim(),
+                species: row.find('td:eq(2)').text().trim(),
+                sex: row.find('td:eq(3)').text().trim(),
+                birth: row.find('td:eq(4)').text().trim(),
+                death: row.find('td:eq(5)').text().trim(),
+                action: 'update',
+            };
+        
             $.ajax({
                 url: '../cgi-bin/crud.pl',
                 type: 'POST',
-                data: { action: 'delete', name: name },
+                data: updatedPet,
                 dataType: 'json',
-                success: function(response) {
-                    alert(response.message);
-                    fetchPets();
-                }
+                success: function (response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        fetchPets();
+                    } else {
+                        alert(response.message);
+                    }
+                },
             });
         });
+        
+        $(document).on('click', '.cancel-btn', function () {
+            const row = $(this).closest('tr');
+            const originalData = JSON.parse(row.attr('data-original'));
 
-        // Actualizar un registro (ejemplo básico)
-        $(document).on('click', '.update-btn', function() {
-            const name = $(this).data('name');
-            const newName = prompt('Enter new name:', name);
-            if (newName) {
+            row.find('td:eq(0)').text(originalData.name);
+            row.find('td:eq(1)').text(originalData.owner);
+            row.find('td:eq(2)').text(originalData.species);
+            row.find('td:eq(3)').text(originalData.sex);
+            row.find('td:eq(4)').text(originalData.birth);
+            row.find('td:eq(5)').text(originalData.death || '');
+        
+            row.find('td[contenteditable="true"]').attr('contenteditable', 'false').removeClass('editable');
+            row.find('.save-btn, .cancel-btn').hide();
+            row.find('.edit-btn').show();
+        });
+
+        $(document).on('click', '.delete-btn', function () {
+            const name = $(this).closest('tr').find('td:eq(0)').text().trim();
+            if (confirm(`Are you sure you want to delete ${name}?`)) {
                 $.ajax({
                     url: '../cgi-bin/crud.pl',
                     type: 'POST',
-                    data: { action: 'update', old_name: name, name: newName },
+                    data: { action: 'delete', name: name },
                     dataType: 'json',
-                    success: function(response) {
+                    success: function (response) {
                         alert(response.message);
                         fetchPets();
-                    }
+                    },
                 });
             }
         });
 
-        // Cargar los registros iniciales al cargar la página
         $(document).ready(fetchPets);
+        
     </script>
 </body>
 </html>

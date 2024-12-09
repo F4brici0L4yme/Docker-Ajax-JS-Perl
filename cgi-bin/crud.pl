@@ -7,23 +7,18 @@ use JSON;
 
 my $cgi = CGI->new;
 
-# Configurar las cabeceras para JSON
 print $cgi->header(-type => 'application/json', -charset => 'UTF-8');
 
-# Configuración de la base de datos
 my $dsn      = "DBI:mysql:database=menagerie;host=127.0.0.1";
 my $username = "root";
 my $password = "";
 
-# Conexión a la base de datos
 my $dbh = DBI->connect($dsn, $username, $password, { RaiseError => 1, PrintError => 0 });
 
-# Determinar la acción solicitada
 my $action = $cgi->param('action') || '';
 my $response = { status => 'error', message => 'Invalid action' };
 
 if ($action eq 'insert') {
-    # Insertar un nuevo registro
     my $name    = $cgi->param('name');
     my $owner   = $cgi->param('owner');
     my $species = $cgi->param('species');
@@ -43,7 +38,6 @@ if ($action eq 'insert') {
     }
 
 } elsif ($action eq 'delete') {
-    # Eliminar un registro
     my $name = $cgi->param('name');
 
     eval {
@@ -55,7 +49,6 @@ if ($action eq 'insert') {
     }
 
 } elsif ($action eq 'update') {
-    # Actualizar un registro existente
     my $old_name = $cgi->param('old_name');
     my $name     = $cgi->param('name');
     my $owner    = $cgi->param('owner');
@@ -76,7 +69,6 @@ if ($action eq 'insert') {
     }
 
 } elsif ($action eq 'fetch') {
-    # Obtener todos los registros de la tabla
     my $sth = $dbh->prepare("SELECT * FROM pets");
     $sth->execute();
     my @pets;
@@ -90,8 +82,6 @@ if ($action eq 'insert') {
     $response = { status => 'error', message => 'Unknown action' };
 }
 
-# Enviar la respuesta en formato JSON
 print encode_json($response);
 
-# Desconectar la base de datos
 $dbh->disconnect;
